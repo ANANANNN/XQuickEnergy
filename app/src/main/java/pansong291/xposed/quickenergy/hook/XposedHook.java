@@ -21,7 +21,6 @@ import pansong291.xposed.quickenergy.*;
 import pansong291.xposed.quickenergy.ui.MainActivity;
 import pansong291.xposed.quickenergy.util.*;
 
-import java.util.Calendar;
 import java.util.Map;
 
 public class XposedHook implements IXposedHookLoadPackage {
@@ -64,10 +63,8 @@ public class XposedHook implements IXposedHookLoadPackage {
             isHooked = true;
             Log.i(TAG, lpparam.packageName);
             classLoader = lpparam.classLoader;
-            hookRpcCall();
-            hookStep();
+            hookRpcCall(lpparam.classLoader);
             hookService(lpparam.classLoader);
-            PluginUtils.invoke(XposedHook.class, PluginUtils.PluginAction.INIT);
         }
     }
 
@@ -85,7 +82,6 @@ public class XposedHook implements IXposedHookLoadPackage {
             runnable = new Runnable() {
                 @Override
                 public void run() {
-                    PluginUtils.invoke(XposedHook.class, PluginUtils.PluginAction.START);
                     String targetUid = RpcUtil.getUserId(XposedHook.classLoader);
                     if (targetUid != null) {
                         FriendIdMap.currentUid = targetUid;
@@ -116,12 +112,10 @@ public class XposedHook implements IXposedHookLoadPackage {
                         AntForestNotification.stop(service, false);
                     }
 
-                    PluginUtils.invoke(XposedHook.class, PluginUtils.PluginAction.STOP);
                 }
             };
         }
         try {
-            AntForestToast.show("仙人掌加载成功");
             handler.removeCallbacks(runnable);
             AntForest.stop();
             AntForestNotification.stop(service, false);
@@ -226,10 +220,10 @@ public class XposedHook implements IXposedHookLoadPackage {
         }
     }
 
-    private void hookRpcCall() {
+    private void hookRpcCall(ClassLoader loader) {
         try {
-            Class<?> clazz = classLoader.loadClass(ClassMember.com_alipay_mobile_nebulaappproxy_api_rpc_H5AppRpcUpdate);
-            Class<?> H5PageClazz = classLoader.loadClass(ClassMember.com_alipay_mobile_h5container_api_H5Page);
+            Class<?> clazz = loader.loadClass(ClassMember.com_alipay_mobile_nebulaappproxy_api_rpc_H5AppRpcUpdate);
+            Class<?> H5PageClazz = loader.loadClass(ClassMember.com_alipay_mobile_h5container_api_H5Page);
             XposedHelpers.findAndHookMethod(
                     clazz, ClassMember.matchVersion, H5PageClazz, Map.class, String.class,
                     XC_MethodReplacement.returnConstant(false));
@@ -238,28 +232,6 @@ public class XposedHook implements IXposedHookLoadPackage {
             Log.i(TAG, "hook " + ClassMember.matchVersion + " err:");
             Log.printStackTrace(TAG, t);
         }
-    }
-
-    private void hookStep() {
-        try {
-            XposedHelpers.findAndHookMethod("com.alibaba.health.pedometer.core.datasource.PedometerAgent", classLoader,
-                    "readDailyStep", new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) {
-                            int originStep = (Integer) param.getResult();
-                            int step = Config.tmpStepCount();
-                            if (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) < 6 || originStep >= step) {
-                                return;
-                            }
-                            param.setResult(step);
-
-                        }
-                    });
-        } catch (Throwable t) {
-            Log.i(TAG, "hookStep err:");
-            Log.printStackTrace(TAG, t);
-        }
-
     }
 
     public static void restartHook(Context context, boolean force) {

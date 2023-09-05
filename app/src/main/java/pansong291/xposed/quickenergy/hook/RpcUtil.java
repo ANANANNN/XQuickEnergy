@@ -44,18 +44,16 @@ public class RpcUtil {
         return XposedHelpers.callMethod(
                 XposedHelpers.callStaticMethod(
                         XposedHelpers.findClass("com.alipay.mobile.framework.AlipayApplication", classLoader),
-                        "getInstance"),
-                "getMicroApplicationContext");
+                        "getInstance"), "getMicroApplicationContext");
     }
 
     public static String getUserId(ClassLoader classLoader) {
         try {
-            Object callMethod = XposedHelpers
-                    .callMethod(XposedHelpers.callMethod(getMicroApplicationContext(classLoader),
+            Object callMethod =
+                    XposedHelpers.callMethod(XposedHelpers.callMethod(getMicroApplicationContext(classLoader),
                             "findServiceByInterface",
                             XposedHelpers.findClass("com.alipay.mobile.personalbase.service.SocialSdkContactService",
-                                    classLoader).getName()),
-                            "getMyAccountInfoModelByLocal");
+                                    classLoader).getName()), "getMyAccountInfoModelByLocal");
             return (String) XposedHelpers.getObjectField(callMethod, "userId");
         } catch (Throwable th) {
             Log.i(TAG, "getUserId err");
@@ -110,7 +108,7 @@ public class RpcUtil {
                                 }
                             }
                         }
-                    } else if (msg.contains("请求不合法") || msg.contains("访问被拒绝")) {
+                    } else if (msg.contains("请求不合法")) {
                         if (Config.waitWhenException() > 0) {
                             long waitTime = System.currentTimeMillis() + Config.waitWhenException();
                             RuntimeInfo.getInstance().put(RuntimeInfo.RuntimeInfoKey.ForestPauseTime, waitTime);
